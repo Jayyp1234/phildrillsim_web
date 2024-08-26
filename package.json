@@ -2,7 +2,7 @@
   "name": "phidrillsimweb",
   "version": "0.1.0",
   "private": true,
-  "homepage": "https://Jayyp1234.github.io/phidrillsimweb",
+  "homepage": "/",
   "dependencies": {
     "@react-navigation/native": "^6.1.18",
     "@reduxjs/toolkit": "^2.2.7",
