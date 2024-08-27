@@ -145,6 +145,7 @@ const WellPlanScreen = () => {
     return results;
   };
 
+
   const miaResults = calculateMIAforLocations(interpolatedData);
 
   const convertToCSV = (miaResults) => {
@@ -182,8 +183,24 @@ const WellPlanScreen = () => {
 
   const handleAxisSelection = (xAxis, yAxis) => {
     setDrawerVisible(false);
-    alert(`Plotting 2D Graph: ${xAxis.label} vs ${yAxis.label}`);
+
+    // Store the interpolated data in local storage
+    localStorage.setItem('interpolatedData', JSON.stringify(interpolatedData));
+
+    // Store the interpolated data in local storage
+    localStorage.setItem('interpolatedmiaData', JSON.stringify(miaResults));
+
+    // Store the interpolated data in local storage
+    localStorage.setItem('plot_type', '2D');
+
+    // Store the selected X and Y axis labels in local storage
+    localStorage.setItem('x_axis_label', xAxis.value);
+    localStorage.setItem('y_axis_label', yAxis.value);
+
+    // Navigate to the 3D plot route
+    navigate('/net-plots');
   };
+  
 
   const handlePlot3DFull = () => {
     if (!surfaceLocation.north || !surfaceLocation.east) {
@@ -198,6 +215,13 @@ const WellPlanScreen = () => {
 
     // Store the interpolated data in local storage
     localStorage.setItem('interpolatedData', JSON.stringify(interpolatedData));
+
+    // Store the interpolated data in local storage
+    localStorage.setItem('interpolatedmiaData', JSON.stringify(miaResults));
+
+    // Store the interpolated data in local storage
+    localStorage.setItem('plot_type', '3D');
+
 
     // Navigate to the 3D plot route
     navigate('/net-plots');

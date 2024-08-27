@@ -28,7 +28,7 @@ const NavigationBar = () => {
            Well Path
           </NavLink>
           <NavLink
-            to="/plots"
+            to="/net-plots"
             className="nav-link  mx-3"
             activeClassName="active"
           >

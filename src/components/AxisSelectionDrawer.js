@@ -38,20 +38,20 @@ const AxisSelectionDrawer = ({ visible, onClose, onSelect }) => {
   const [yAxis, setYAxis] = useState(null);
 
   const availableAxes = [
-    { label: 'MD (ft)', value: 'MD' },
-    { label: 'Inc (°)', value: 'Inc' },
-    { label: 'Azi (°)', value: 'Azi' },
-    { label: 'North (ft)', value: 'North' },
-    { label: 'East (ft)', value: 'East' },
-    { label: 'TVD (ft)', value: 'TVD' },
-    { label: 'RF', value: 'RF' },
-    { label: 'DLS', value: 'DLS' },
-    { label: 'Dogleg', value: 'Dogleg' },
+    { label: 'MD (ft)', value: 'measuredDepth' },
+    { label: 'Inc (°)', value: 'inclination' },
+    { label: 'Azi (°)', value: 'azimuth' },
+    { label: 'North (ft)', value: 'north' },
+    { label: 'East (ft)', value: 'east' },
+    { label: 'TVD (ft)', value: 'tvd' },
+    { label: 'RF', value: 'rf' },
+    { label: 'DLS', value: 'dls' },
+    { label: 'Dogleg', value: 'dogleg' },
   ];
 
   const handleContinue = () => {
     if (xAxis && yAxis) {
-      onSelect(xAxis, yAxis);
+      onSelect(xAxis, yAxis); // Pass both X and Y axes to the parent component
     } else {
       alert("Please select both X and Y axes.");
     }
@@ -62,17 +62,20 @@ const AxisSelectionDrawer = ({ visible, onClose, onSelect }) => {
       <div style={styles.drawerContainer}>
         <h4 style={styles.headerText}>2D Plot Configuration</h4>
 
-        <Dropdown
-          label="Select X-Axis"
-          data={availableAxes}
-          onSelect={(item) => setXAxis(item)}
-        />
 
         <Dropdown
           label="Select Y-Axis"
           data={availableAxes}
           onSelect={(item) => setYAxis(item)}
         />
+        
+        <Dropdown
+          label="Select X-Axis"
+          data={availableAxes}
+          onSelect={(item) => setXAxis(item)}
+        />
+
+        
 
         <div style={styles.buttonContainer}>
           <button style={styles.buttonClose} onClick={onClose}>
@@ -86,6 +89,7 @@ const AxisSelectionDrawer = ({ visible, onClose, onSelect }) => {
     </div>
   ) : null;
 };
+
 
 const styles = {
   modalContainer: {
