@@ -1,21 +1,23 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import AxisSelectionDrawer from '../components/AxisSelectionDrawer';
-import { useSelector } from 'react-redux';
+import AxisSelectionDrawer from '../components/AxisSelectionDrawer'; // Component for selecting axes in 2D plot
+import { useSelector } from 'react-redux'; // To access Redux state
 
 const WellPlanScreen = () => {
+  // Local state to manage the visibility of various elements
   const [showWellPath, setShowWellPath] = useState(false);
   const [showXYZPath, setShowXYZPath] = useState(false);
   const [showCurvature, setShowCurvature] = useState(false);
   const [showBuildWalk, setShowBuildWalk] = useState(false);
-  const [drawerVisible, setDrawerVisible] = useState(false);
-  const navigate = useNavigate();
+  const [drawerVisible, setDrawerVisible] = useState(false); // State to manage the visibility of the AxisSelectionDrawer
+  const navigate = useNavigate(); // Hook to navigate between routes
   
+  // Accessing well plan data from the Redux store
   const wellPlanManager = useSelector(state => state.wellPlanManager);
   const wellPlanData = wellPlanManager?.data;
   const { surfaceLocation, targets, kopValue, interval } = wellPlanData || {};
 
-  // Ensure that wellPlanData is available
+  // If no well plan data is available, display a message
   if (!surfaceLocation || !targets || targets.length === 0) {
     return (
       <div style={styles.noDataContainer}>
@@ -24,28 +26,33 @@ const WellPlanScreen = () => {
     );
   }
 
+  // Function to calculate the Kick-Off Point (KOP) value
   const calculateKOP = ({ x, y, tvd, buildRate = 2 }) => {
-    const hd = Math.sqrt(x ** 2 + y ** 2);
-    const md = Math.sqrt(tvd ** 2 + hd ** 2);
-    const inclinationAngle = Math.atan(hd / tvd) * (180 / Math.PI);
-    const mdInclined = (inclinationAngle / buildRate) * 100;
-    return md - mdInclined;
+    const hd = Math.sqrt(x ** 2 + y ** 2); // Horizontal distance
+    const md = Math.sqrt(tvd ** 2 + hd ** 2); // Measured depth
+    const inclinationAngle = Math.atan(hd / tvd) * (180 / Math.PI); // Inclination angle in degrees
+    const mdInclined = (inclinationAngle / buildRate) * 100; // Inclined measured depth
+    return md - mdInclined; // Final KOP value
   };
 
+  // Parameters needed to calculate KOP
   const kopParameters = {
     x: Number(surfaceLocation.east) - Number(targets[0].east),
     y: Number(surfaceLocation.north) - Number(targets[0].north),
     tvd: Number(targets[0].tvd),
   };
 
+  // Determine the KOP value (either manual input or calculated)
   const kop = kopValue == null || kopValue.trim() === '' ? calculateKOP(kopParameters).toFixed(2) : kopValue;
 
+  // Combine surface location and target locations into a single list
   const combinedLocations = [
     surfaceLocation,
     { east: surfaceLocation.east, north: surfaceLocation.north, tvd: kop },
     ...targets,
   ];
 
+  // Function to interpolate data points based on the given interval
   const interpolateData = (dataPoints, interval) => {
     const result = [];
     for (let i = 0; i < dataPoints.length - 1; i++) {
@@ -87,8 +94,10 @@ const WellPlanScreen = () => {
     return result;
   };
 
+  // Generate interpolated data for the well path
   const interpolatedData = interpolateData(combinedLocations, interval);
 
+  // Function to calculate Measured Depth, Inclination, and Azimuth (MIA) for each location
   const calculateMIAforLocations = (locations) => {
     const results = [];
 
@@ -113,7 +122,6 @@ const WellPlanScreen = () => {
         const deltaN = current.north - previous.north;
         const deltaE = current.east - previous.east;
         const deltaTVD = current.tvd - previous.tvd;
-
         
         const horizontalDisplacement = Math.sqrt(deltaN ** 2 + deltaE ** 2);
         const measuredDepth = Math.sqrt(deltaN ** 2 + deltaE ** 2 + deltaTVD ** 2);
@@ -145,9 +153,10 @@ const WellPlanScreen = () => {
     return results;
   };
 
-
+  // Calculate MIA results based on the interpolated data
   const miaResults = calculateMIAforLocations(interpolatedData);
 
+  // Function to convert MIA results to CSV format
   const convertToCSV = (miaResults) => {
     if (!Array.isArray(miaResults) || miaResults.length === 0) {
       console.error("miaResults is not a valid array or is empty.");
@@ -161,6 +170,7 @@ const WellPlanScreen = () => {
     return header + csvRows.join('\n');
   };
   
+  // Function to export MIA results as a CSV file
   const handleExport = (miaResults) => {
     const csvData = convertToCSV(miaResults);
     if (csvData) {
@@ -177,31 +187,27 @@ const WellPlanScreen = () => {
     }
   };
 
+  // Function to handle plotting a 2D graph
   const handlePlot2D = () => {
     setDrawerVisible(true);
   };
 
+  // Function to handle axis selection for 2D plotting
   const handleAxisSelection = (xAxis, yAxis) => {
     setDrawerVisible(false);
 
     // Store the interpolated data in local storage
     localStorage.setItem('interpolatedData', JSON.stringify(interpolatedData));
-
-    // Store the interpolated data in local storage
     localStorage.setItem('interpolatedmiaData', JSON.stringify(miaResults));
-
-    // Store the interpolated data in local storage
     localStorage.setItem('plot_type', '2D');
-
-    // Store the selected X and Y axis labels in local storage
     localStorage.setItem('x_axis_label', xAxis.value);
     localStorage.setItem('y_axis_label', yAxis.value);
 
-    // Navigate to the 3D plot route
+    // Navigate to the 2D plot route
     navigate('/net-plots');
   };
-  
 
+  // Function to handle plotting a full 3D well path
   const handlePlot3DFull = () => {
     if (!surfaceLocation.north || !surfaceLocation.east) {
       alert("Validation Error: Please fill in all Surface Location fields.");
@@ -215,18 +221,12 @@ const WellPlanScreen = () => {
 
     // Store the interpolated data in local storage
     localStorage.setItem('interpolatedData', JSON.stringify(interpolatedData));
-
-    // Store the interpolated data in local storage
     localStorage.setItem('interpolatedmiaData', JSON.stringify(miaResults));
-
-    // Store the interpolated data in local storage
     localStorage.setItem('plot_type', '3D');
-
 
     // Navigate to the 3D plot route
     navigate('/net-plots');
-};
-
+  };
 
   return (
     <div style={styles.container}>
@@ -237,75 +237,74 @@ const WellPlanScreen = () => {
         </button>
       </div>
       <div className='row'>
-      <div className='col-md-6' style={{ height: 400, overflowY: 'scroll' }}>
-        <table style={styles.table}>
-          <thead>
-            <tr style={styles.tableHeader}>
-              <th style={styles.headerText}>Location</th>
-              <th style={styles.headerText}>N (ft)</th>
-              <th style={styles.headerText}>E (ft)</th>
-              <th style={styles.headerText}>TVD (ft)</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr style={styles.tableRow}>
-              <td style={styles.rowTitle}>Surface Location</td>
-              <td style={styles.rowText}>{Number(surfaceLocation.north).toFixed(2)}</td>
-              <td style={styles.rowText}>{Number(surfaceLocation.east).toFixed(2)}</td>
-              <td style={styles.rowText}>{Number(surfaceLocation.tvd).toFixed(2)}</td>
-            </tr>
-            <tr style={styles.tableRow}>
-              <td style={styles.rowTitle}>KOP</td>
-              <td style={styles.rowText}>{Number(surfaceLocation.north).toFixed(2)}</td>
-              <td style={styles.rowText}>{Number(surfaceLocation.east).toFixed(2)}</td>
-              <td style={styles.rowText}>{Number(kop).toFixed(2)}</td>
-            </tr>
-            {targets.map((target, index) => (
-              <tr style={styles.tableRow} key={index}>
-                <td style={styles.rowTitle}>Target {index + 1}</td>
-                <td style={styles.rowText}>{Number(target.north).toFixed(2)}</td>
-                <td style={styles.rowText}>{Number(target.east).toFixed(2)}</td>
-                <td style={styles.rowText}>{Number(target.tvd).toFixed(2)}</td>
+        <div className='col-md-6' style={{ height: 400, overflowY: 'scroll' }}>
+          <table style={styles.table}>
+            <thead>
+              <tr style={styles.tableHeader}>
+                <th style={styles.headerText}>Location</th>
+                <th style={styles.headerText}>N (ft)</th>
+                <th style={styles.headerText}>E (ft)</th>
+                <th style={styles.headerText}>TVD (ft)</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              <tr style={styles.tableRow}>
+                <td style={styles.rowTitle}>Surface Location</td>
+                <td style={styles.rowText}>{Number(surfaceLocation.north).toFixed(2)}</td>
+                <td style={styles.rowText}>{Number(surfaceLocation.east).toFixed(2)}</td>
+                <td style={styles.rowText}>{Number(surfaceLocation.tvd).toFixed(2)}</td>
+              </tr>
+              <tr style={styles.tableRow}>
+                <td style={styles.rowTitle}>KOP</td>
+                <td style={styles.rowText}>{Number(surfaceLocation.north).toFixed(2)}</td>
+                <td style={styles.rowText}>{Number(surfaceLocation.east).toFixed(2)}</td>
+                <td style={styles.rowText}>{Number(kop).toFixed(2)}</td>
+              </tr>
+              {targets.map((target, index) => (
+                <tr style={styles.tableRow} key={index}>
+                  <td style={styles.rowTitle}>Target {index + 1}</td>
+                  <td style={styles.rowText}>{Number(target.north).toFixed(2)}</td>
+                  <td style={styles.rowText}>{Number(target.east).toFixed(2)}</td>
+                  <td style={styles.rowText}>{Number(target.tvd).toFixed(2)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
 
-      <div className='col-md-6' style={{ overflow: 'auto', maxHeight: 400 }}>
-        <table style={styles.table}>
-          <thead>
-            <tr style={styles.tableHeader}>
-              {showWellPath && <th style={styles.headerText}>MD (ft)</th>}
-              {showWellPath && <th style={styles.headerText}>Inc (°)</th>}
-              {showWellPath && <th style={styles.headerText}>Azi (°)</th>}
-              {showXYZPath && <th style={styles.headerText}>North (ft)</th>}
-              {showXYZPath && <th style={styles.headerText}>East (ft)</th>}
-              {showXYZPath && <th style={styles.headerText}>TVD (ft)</th>}
-              {showCurvature && <th style={styles.headerText}>RF</th>}
-              {showBuildWalk && <th style={styles.headerText}>DLS</th>}
-              {showBuildWalk && <th style={styles.headerText}>Dogleg</th>}
-            </tr>
-          </thead>
-          <tbody>
-            {miaResults.map((mia, index) => (
-              <tr style={styles.tableRow} key={index}>
-                {showWellPath && <td style={styles.rowValue}>{mia.measuredDepth.toFixed(2)}</td>}
-                {showWellPath && <td style={styles.rowValue}>{mia.inclination.toFixed(2)}</td>}
-                {showWellPath && <td style={styles.rowValue}>{mia.azimuth.toFixed(2)}</td>}
-                {showXYZPath && <td style={styles.rowValue}>{mia.north}</td>}
-                {showXYZPath && <td style={styles.rowValue}>{mia.east}</td>}
-                {showXYZPath && <td style={styles.rowValue}>{mia.tvd}</td>}
-                {showCurvature && <td style={styles.rowValue}>{mia.rf.toFixed(2)}</td>}
-                {showBuildWalk && <td style={styles.rowValue}>{mia.dls.toFixed(2)}</td>}
-                {showBuildWalk && <td style={styles.rowValue}>{mia.dogleg.toFixed(2)}</td>}
+        <div className='col-md-6' style={{ overflow: 'auto', maxHeight: 400 }}>
+          <table style={styles.table}>
+            <thead>
+              <tr style={styles.tableHeader}>
+                {showWellPath && <th style={styles.headerText}>MD (ft)</th>}
+                {showWellPath && <th style={styles.headerText}>Inc (°)</th>}
+                {showWellPath && <th style={styles.headerText}>Azi (°)</th>}
+                {showXYZPath && <th style={styles.headerText}>North (ft)</th>}
+                {showXYZPath && <th style={styles.headerText}>East (ft)</th>}
+                {showXYZPath && <th style={styles.headerText}>TVD (ft)</th>}
+                {showCurvature && <th style={styles.headerText}>RF</th>}
+                {showBuildWalk && <th style={styles.headerText}>DLS</th>}
+                {showBuildWalk && <th style={styles.headerText}>Dogleg</th>}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {miaResults.map((mia, index) => (
+                <tr style={styles.tableRow} key={index}>
+                  {showWellPath && <td style={styles.rowValue}>{mia.measuredDepth.toFixed(2)}</td>}
+                  {showWellPath && <td style={styles.rowValue}>{mia.inclination.toFixed(2)}</td>}
+                  {showWellPath && <td style={styles.rowValue}>{mia.azimuth.toFixed(2)}</td>}
+                  {showXYZPath && <td style={styles.rowValue}>{mia.north}</td>}
+                  {showXYZPath && <td style={styles.rowValue}>{mia.east}</td>}
+                  {showXYZPath && <td style={styles.rowValue}>{mia.tvd}</td>}
+                  {showCurvature && <td style={styles.rowValue}>{mia.rf.toFixed(2)}</td>}
+                  {showBuildWalk && <td style={styles.rowValue}>{mia.dls.toFixed(2)}</td>}
+                  {showBuildWalk && <td style={styles.rowValue}>{mia.dogleg.toFixed(2)}</td>}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
-      </div>
-      
 
       <div style={styles.controlPanel}>
         <h4 style={styles.controlPanelHeader}>Control Panel</h4>
@@ -421,56 +420,6 @@ const styles = {
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#ccc',
-    
-  },
-  headerText: {
-    flex: 1,
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#fff',
-    textAlign: 'center',
-  },
-  tableRow: {
-    display: 'flex',
-    flexDirection: 'row',
-    backgroundColor: '#f8f8f8',
-    borderBottomWidth: 1,
-    borderBottomColor: '#ccc',
-  },
-  rowTitle: {
-    flex: 1,
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#333',
-    paddingVertical: 10,
-    paddingHorizontal: 5,
-    textAlign: 'left',
-    backgroundColor: '#e6e6e6',
-  },
-  rowText: {
-    flex: 1,
-    fontSize: 14,
-    color: '#333',
-    paddingVertical: 10,
-    paddingHorizontal: 5,
-    textAlign: 'center',
-  },
-  rowValue: {
-    display: 'table-cell',
-    fontSize: 14,
-    padding: 8,
-    textAlign: 'center',
-  },
-  noDataContainer: {
-    display: 'flex',
-    backgroundColor: 'black',
-    justifyContent: 'center',
-    alignItems: 'center',
-    height: '100vh',
-  },
-  noDataText: {
-    color: 'white',
-    fontSize: 18,
   },
   controlPanel: {
     marginVertical: 16,
@@ -511,7 +460,7 @@ const styles = {
     fontWeight: 'bold',
     cursor: 'pointer',
     paddingTop:8,
-    paddingBottom:8
+    paddingBottom:8,
   },
   plotButton3D: {
     flex: 1,

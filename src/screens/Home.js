@@ -6,42 +6,58 @@ import { setWellPlanData } from '../store/wellDataSlice';
 import { useDispatch } from 'react-redux';
 
 const Home = () => {
+  // State for storing surface location data
   const [surfaceLocation, setSurfaceLocation] = useState({ north: '', east: '', tvd: '' });
+  // State for storing list of target locations
   const [targets, setTargets] = useState([]);
+  // State for controlling the visibility of the upload modal
   const [isModalVisible, setModalVisible] = useState(false);
+  // State to toggle between manual and calculated KOP (Kick-Off Point) input
   const [isKOPManual, setIsKOPManual] = useState(false); 
+  // State to store the value of the KOP
   const [kopValue, setKOPValue] = useState('');
+  // State to store the depth interval value
   const [interval, setInterval] = useState(10);
+  // State to control the visibility of the drawer/modal for depth interval
   const [isDrawerVisible, setIsDrawerVisible] = useState(false);
+  // State to control another drawer visibility (not used in this code, consider removing if unnecessary)
   const [drawerVisible, setDrawerVisible] = useState(false);
-  const dispatch = useDispatch()
+
+  const dispatch = useDispatch();
   const navigation = useNavigate();
+
+  // Function to add a new target location to the list
   const handleAddTarget = () => {
     setTargets([...targets, { north: '', east: '', tvd: '' }]);
   };
 
+  // Function to calculate the KOP value based on the input parameters
   const calculateKOP = ({ x, y, tvd, buildRate = 2 }) => {
-    const hd = Math.sqrt(x ** 2 + y ** 2);
-    const md = Math.sqrt(tvd ** 2 + hd ** 2);
-    const inclinationAngle = Math.atan(hd / tvd) * (180 / Math.PI);
-    const mdInclined = (inclinationAngle / buildRate) * 100;
-    return md - mdInclined;
+    const hd = Math.sqrt(x ** 2 + y ** 2); // Horizontal distance
+    const md = Math.sqrt(tvd ** 2 + hd ** 2); // Measured depth
+    const inclinationAngle = Math.atan(hd / tvd) * (180 / Math.PI); // Inclination angle in degrees
+    const mdInclined = (inclinationAngle / buildRate) * 100; // Measured depth inclined
+    return md - mdInclined; // Final KOP value
   };
 
+  // Parameters needed to calculate KOP
   const kopParameters = {
     x: Number(surfaceLocation.east) - (targets.length > 0 ? Number(targets[0].east) : 0),
     y: Number(surfaceLocation.north) - (targets.length > 0? Number(targets[0].north) : 0),
     tvd: Number(targets.length > 0 ? targets[0].tvd : 0),
   };
 
+  // Determine the KOP value to use (manual input or calculated)
   const kop = kopValue == null || kopValue.trim() === '' ? calculateKOP(kopParameters).toFixed(2) : kopValue;
 
+  // Combine surface location and target locations into a single list
   const combinedLocations = [
     surfaceLocation,
     { east: surfaceLocation.east, north: surfaceLocation.north, tvd: kop },
     ...targets,
   ];
 
+  // Function to interpolate data points based on the given interval
   const interpolateData = (dataPoints, interval) => {
     const result = [];
     
@@ -85,8 +101,10 @@ const Home = () => {
     return result;
   };
 
+  // Interpolate the combined locations to generate more data points
   const interpolatedData = interpolateData(combinedLocations, interval);
 
+  // Function to calculate Measured Depth, Inclination, and Azimuth (MIA) for each location
   const calculateMIAforLocations = (locations) => {
     const results = [];
 
@@ -142,28 +160,33 @@ const Home = () => {
     return results;
   };
 
+  // Calculate the MIA values for the interpolated data
   const miaResults = calculateMIAforLocations(interpolatedData);
 
+  // Function to remove a target from the list
   const handleRemoveTarget = (index) => {
     const updatedTargets = targets.filter((_, i) => i !== index);
     setTargets(updatedTargets);
   };
 
+  // Function to handle changes to target inputs
   const handleTargetChange = (index, key, value) => {
     const updatedTargets = [...targets];
     updatedTargets[index][key] = value;
     setTargets(updatedTargets);
   };
 
+  // Function to validate input fields and show the drawer/modal if valid
   const handlePlan = () => {
+    // Validation for surface location inputs
     if (surfaceLocation.north.toString() === '0' || surfaceLocation.east.toString() === '0' || surfaceLocation.tvd.toString() === '0') {
-      
-    }
-    else if (!surfaceLocation.north || !surfaceLocation.east || !surfaceLocation.tvd) {
+      // Perform some validation or error handling
+    } else if (!surfaceLocation.north || !surfaceLocation.east || !surfaceLocation.tvd) {
       alert("Please fill in all Surface Location fields.");
       return;
     }
   
+    // Ensure at least one target is added
     if (targets.length === 0) {
       alert("Please add at least one Target Location.");
       return;
@@ -171,6 +194,7 @@ const Home = () => {
   
     let atLeastOneTargetFilled = false;
   
+    // Check if all target fields are filled in correctly
     for (let i = 0; i < targets.length; i++) {
       const targetNorthStr = String(targets[i].north);
       const targetEastStr = String(targets[i].east);
@@ -184,7 +208,6 @@ const Home = () => {
       }
     }
     
-  
     if (!atLeastOneTargetFilled) {
       alert("Please ensure at least one Target Location is completely filled.");
       return;
@@ -192,19 +215,23 @@ const Home = () => {
     setIsDrawerVisible(true);
   };
 
+  // Function to toggle the upload modal visibility
   const toggleModal = () => {
     setModalVisible(!isModalVisible);
   };
 
+  // Function to handle the data loaded from the upload modal
   const handleDataLoaded = (newSurfaceLocation, newTargets) => {
     setSurfaceLocation(newSurfaceLocation);
     setTargets(newTargets);
   };
 
+  // Function to toggle the drawer/modal visibility
   const toggleDrawer = () => {
     setIsDrawerVisible(!isDrawerVisible);
   };
 
+  // Function to handle the final continue action and dispatch the well plan data
   const handleContinue = () => {
     const finalKopValue = kopValue || calculateKOP(kopParameters).toFixed(2);
     dispatch(setWellPlanData({
@@ -212,7 +239,7 @@ const Home = () => {
       targets,
       kopValue: finalKopValue,
       interval,
-    }))
+    }));
     navigation('/well-path');
     setDrawerVisible(false);
   };
